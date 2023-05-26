@@ -86,7 +86,7 @@ def get_new_age(user_id):
 
 def found_people(user_id, age_from, age_to,city_id,sex, city_title):
     result = vk_user_got_api.users.search(
-        count=50,
+        count=10,
         city=city_id,
         age_from=age_from,
         age_to=age_to,
@@ -99,6 +99,7 @@ def found_people(user_id, age_from, age_to,city_id,sex, city_title):
     sending_messages(user_id, f'Поиск успешен ')
     for user in result['items']:
         if user['is_closed'] == False and user['can_write_private_message'] == True:
+            user_profile = []
 
             vk_id = user['id']
             user_url = f"https://vk.com/id{user['id']}"
@@ -106,14 +107,18 @@ def found_people(user_id, age_from, age_to,city_id,sex, city_title):
             last_name = user['last_name']
             user_bdate = user['bdate']
 
-            try:
-                user_photo = get_photo(user_id, user)
-                add_user_to_table(id_vk=vk_id, user_url=user_url, first_name=first_name, last_name=last_name,
-                                  bdate=str(user_bdate), city=city_title, photo=user_photo)
-            except vk_api.exceptions.ApiError as e:
-                if e.code == 30:
-                    sending_messages(user_id, f'Ошибка {e}')
-                    continue
+            user_profile.extend([first_name,last_name,user_url])
+
+            sending_messages(user_id, user_profile)
+
+            # try:
+            #     user_photo = get_photo(user_id, user)
+            #     add_user_to_table(id_vk=vk_id, user_url=user_url, first_name=first_name, last_name=last_name,
+            #                       bdate=str(user_bdate), city=city_title, photo=user_photo)
+            # except vk_api.exceptions.ApiError as e:
+            #     if e.code == 30:
+            #         sending_messages(user_id, f'Ошибка {e}')
+            #         continue
     sending_messages(user_id, f'Поиск завершен')
 
 
