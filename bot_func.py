@@ -42,14 +42,17 @@ def get_age(user_id, user_info, longpoll):
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             request = event.text
             if request == '1':
-                age_from, age_to = get_your_age(user_id, user_info)
+                age_from, age_to = get_your_age(user_id, user_info, longpoll)
                 return age_from, age_to
             elif request == '2':
                 age_from, age_to = get_new_age(user_id, longpoll)
                 return age_from, age_to
+            else:
+                sending_messages(user_id,
+                                 f'Введите 1 - чтобы использовать Ваш возраст и введите 2 - чтобы ввести возраст вручную')
 
 
-def get_your_age(user_id, user_info):
+def get_your_age(user_id, user_info, longpoll):
     try:
         birthday = user_info[0]['bdate']
         birthdate = datetime.datetime.strptime(birthday, '%d.%m.%Y')
@@ -61,7 +64,10 @@ def get_your_age(user_id, user_info):
         sending_messages(user_id, f'У вас скрыта информация о вашем возрасте, перенаправляю на ввод возраста вручную')
         age_from, age_to = get_new_age(user_id, longpoll)
         return age_from, age_to
-
+    except ValueError:
+        sending_messages(user_id, f'У неполная информация о возрасте перенаправляю на ввод возраста вручную')
+        age_from, age_to = get_new_age(user_id, longpoll)
+        return age_from, age_to
 
 def get_new_age(user_id, longpoll):
     sending_messages(user_id, f'Введите минимальный возраст для поиска: ')
@@ -139,33 +145,36 @@ def found_people(user_id, age_from, age_to, city_id, sex, city_title, offset):
         fields='is_closed, can_write_private_message, bdate, city'
     )
 
-    sending_messages(user_id, f'Поиск успешен ')
-    for user in result['items']:
-        if user['is_closed'] == False and user['can_write_private_message'] == True:
-            try:
-                # user_profile = []
+    try:
+        if 'items' in result:
+            sending_messages(user_id, f'Поиск успешен ')
+            for user in result['items']:
+                try:
+                    if user['is_closed'] == False and user['can_write_private_message'] == True:
+                            user_url = f"https://vk.com/id{user['id']}"
+                            first_name = user['first_name']
+                            last_name = user['last_name']
+                            vk_id = user['id']
+                            user_bdate = user['bdate']
 
-                user_url = f"https://vk.com/id{user['id']}"
-                first_name = user['first_name']
-                last_name = user['last_name']
-                vk_id = user['id']
-                user_bdate = user['bdate']
+                            if not is_user_in_database(vk_id):
+                                user_photo = get_photo(user_id, user)
+                                message = f"Имя: {first_name}\nФамилия: {last_name}\nГород: {city_title}\nСсылка на профиль: {user_url}\nДата рождения: {user_bdate}\nФотографии: {' '.join(user_photo)}"
+                                sending_messages(user_id, message)
 
-                if not is_user_in_database(vk_id):
-                    user_photo = get_photo(user_id, user)
-                    # user_profile.extend([first_name, last_name, user_url, user_photo])
-                    # sending_messages(user_id, user_profile)
+                                add_user_to_table(id_vk=vk_id)
+                except vk_api.exceptions.ApiError as e:
+                    if e.code == 30:
+                        sending_messages(user_id, f'Ошибка {e}')
+                        continue
+        else:
+            sending_messages(user_id, f'Ключ "items" отсутствует в полученных данных')
 
-                    message = f"Имя: {first_name}\nФамилия: {last_name}\nГород: {city_title}\nСсылка на профиль: {user_url}\nДата рождения: {user_bdate}\nФотографии: {' '.join(user_photo)}"
-                    sending_messages(user_id, message)
+        sending_messages(user_id, f'Поиск завершен')
 
-                    add_user_to_table(id_vk=vk_id)
-            except vk_api.exceptions.ApiError as e:
-                if e.code == 30:
-                    sending_messages(user_id, f'Ошибка {e}')
-                    continue
-
-    sending_messages(user_id, f'Поиск завершен')
+    except KeyError:
+        sending_messages(user_id, f'Ошибка запроса. Возврат в меню')
+        return
 
 
 def get_photo(user_id, user):
