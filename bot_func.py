@@ -5,6 +5,8 @@ import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 import datetime
 from db_func import add_user_to_table
+from db_func import is_user_in_database
+
 
 vk_group = vk_api.VkApi(token=group_token)
 vk_group_got_api = vk_group.get_api()
@@ -58,20 +60,23 @@ def found_people(user_id, age_from, age_to,city_id,sex, city_title, offset):
                 user_url = f"https://vk.com/id{user['id']}"
                 first_name = user['first_name']
                 last_name = user['last_name']
-                user_bdate = user['bdate']
                 vk_id = user['id']
+                user_bdate = user['bdate']
 
-                user_photo = get_photo(user_id, user)
+                if not is_user_in_database(vk_id):
+                    user_photo = get_photo(user_id, user)
+                    #user_profile.extend([first_name, last_name, user_url, user_photo])
+                    #sending_messages(user_id, user_profile)
 
-                user_profile.extend([first_name, last_name, user_url, user_photo])
-                sending_messages(user_id, user_profile)
+                    message = f"Имя: {first_name}\nФамилия: {last_name}\nСсылка на профиль: {user_url}\nДата рождения: {user_bdate}\nФотографии: {' '.join(user_photo)}"
+                    sending_messages(user_id, message)
 
-            #     add_user_to_table(id_vk=vk_id, user_url=user_url, first_name=first_name, last_name=last_name,
-            #                       bdate=str(user_bdate), city=city_title, photo=user_photo)
+                    add_user_to_table(id_vk=vk_id)
             except vk_api.exceptions.ApiError as e:
                 if e.code == 30:
                     sending_messages(user_id, f'Ошибка {e}')
                     continue
+
     sending_messages(user_id, f'Поиск завершен')
 
 
