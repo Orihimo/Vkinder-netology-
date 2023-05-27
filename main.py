@@ -19,14 +19,20 @@ for event in longpoll.listen():
             db_func.create_or_clear_database()
             age_from, age_to, sex, city_title, city_id = bot_func.chat_bot(user_id, longpoll)
             search_completed = True
+            offset = 0
             bot_func.sending_messages(user_id, f'Данные пользователя созданы, для показа введите смотреть')
 
         elif request == 'смотреть':
             if search_completed:
-                bot_func.sending_messages(user_id, f"offset = {offset}")
-                bot_func.sending_messages(user_id, "Смотрим")
-                bot_func.found_people(user_id=user_id, age_from=age_from, age_to=age_to, sex=sex, city_title=city_title, city_id=city_id, offset=offset)
-                offset += 30
+                # if age_from is not None and age_to is not None and sex is not None and city_title and city_id: (Можно использовать и такую конструкцию, смысл будет один)
+                if all([age_from, age_to, sex, city_title, city_id]):
+                    bot_func.sending_messages(user_id, f"offset = {offset}")
+                    bot_func.sending_messages(user_id, "Смотрим")
+                    bot_func.found_people(user_id=user_id, age_from=age_from, age_to=age_to, sex=sex, city_title=city_title, city_id=city_id, offset=offset)
+                    offset += 30
+                else:
+                    bot_func.sending_messages(user_id,
+                                              f'Не все данные определены. Сначала нужно выполнить команду "старт"')
             else:
                 bot_func.sending_messages(user_id, f'Сначала нужно ввести поиск')
 
