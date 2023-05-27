@@ -8,18 +8,27 @@ def create_or_clear_database():
     if cursor.fetchone():
         cursor.execute("DROP TABLE users")
     cursor.execute(
-        "CREATE TABLE users (id INTEGER PRIMARY KEY, id_vk INTEGER, user_url TEXT, first_name TEXT, last_name TEXT, bdate TEXT, city TEXT, photo_urls TEXT)")
+        "CREATE TABLE users (id INTEGER PRIMARY KEY, id_vk INTEGER)")
     conn.close()
 
 
-def add_user_to_table(id_vk, user_url, first_name, last_name, bdate, city, photo=None):
+def add_user_to_table(id_vk):
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (id_vk) VALUES (?)", (id_vk,))
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f'Ошибка при выполнение запроса {e}')
+    finally:
+        if conn:
+            conn.close()
+
+def is_user_in_database(id_vk):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    if photo is not None:
-        cursor.execute("INSERT INTO users (id_vk, user_url, first_name, last_name, bdate, city, photo_urls) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                       (id_vk, user_url, first_name, last_name, bdate, city, ','.join(photo)))
-    else:
-        cursor.execute("INSERT INTO users (id_vk, user_url, first_name, last_name, bdate, city) VALUES (?, ?, ?, ?, ?, ?)",
-                       (id_vk, user_url, first_name, last_name, bdate, city))
-    conn.commit()
+    cursor.execute("SELECT id_vk FROM users WHERE id_vk = ?", (id_vk,))
+    existing_user = cursor.fetchone()
     conn.close()
+
+    return existing_user is not None

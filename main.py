@@ -7,24 +7,38 @@ import db_func
 vk = vk_api.VkApi(token=group_token)
 longpoll = VkLongPoll(vk)
 
+offset = 0
+search_completed = False
 
 for event in longpoll.listen():
     if event.type == VkEventType.MESSAGE_NEW and event.to_me:
         request = event.text
         user_id = event.user_id
 
-        if request == 'поиск':
+        if request == 'старт':
             db_func.create_or_clear_database()
-            bot_func.chat_bot(user_id)
+            age_from, age_to, sex, city_title, city_id = bot_func.chat_bot(user_id, longpoll)
+            search_completed = True
+            bot_func.sending_messages(user_id, f'Данные пользователя созданы, для показа введите смотреть')
 
         elif request == 'смотреть':
-            pass
+            if search_completed:
+                bot_func.sending_messages(user_id, f"offset = {offset}")
+                bot_func.sending_messages(user_id, "Смотрим")
+                bot_func.found_people(user_id=user_id, age_from=age_from, age_to=age_to, sex=sex, city_title=city_title, city_id=city_id, offset=offset)
+                offset += 30
+            else:
+                bot_func.sending_messages(user_id, f'Сначала нужно ввести поиск')
 
         elif request == 'очистка':
             db_func.create_or_clear_database()
+            bot_func.sending_messages(user_id, f'База очищена')
 
-        # else:
-        #     bot_func.sending_messages(user_id,
-        #                               'Введите 1 или поиск для очистки бд и поиска новых знакомств, 2 или смотреть для просмотра результатов поиска, 3 или очистка для очистки бд')
+        else:
+            bot_func.sending_messages(user_id, f"Введите 'старт' - для начала работы\n"
+                                               f"Введите 'смотреть - для показа результатов\n"
+                                               f"Введите 'очитска - чтобы очистить базу данных")
+
+
 
 
